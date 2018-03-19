@@ -1,0 +1,194 @@
+---
+title: "Homework 1"
+author: "Daneshwari Masti UNI:dm3310"
+date: "1/30/18"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+options(repos="https://cran.rstudio.com" )
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
+                      message = FALSE)
+```
+
+
+*For all questions involving histograms, choose a sensible binwidth and breakpoints, unless otherwise indicated.*
+
+### 1. Income
+
+a) Describe in detail the features you observe in the boxplots below, plotted with data from the *ex0525* dataset, **Sleuth3** page. (see page 29 in *Graphical Data Analysis in R* for a list of features to concentrate on, and the numbered list on the bottom of page 43 for an example of how to describe features of a graph in words.) [5 points]
+
+```{r}
+#install.packages("Sleuth3")
+library(Sleuth3)
+library(tidyverse)
+
+# convert Educ from an integer to a factor, and make "<12" the first factor level 
+mydata <- ex0525 %>% 
+  dplyr::mutate(Educ = forcats::fct_relevel(Educ, "<12"))
+
+ggplot(mydata, aes(Educ, Income2005)) +
+  geom_boxplot() + 
+  coord_flip()   # for horizontal boxplots
+```
+
+a) The features visible from the boxplot are as listed below:
+1) the income increases with the increase in number of years of education
+2) the incomes are skewed towards the right
+3) there is one outlier with income greater the 7e+5
+
+
+b) Plot a histogram of the `Income2005` variable in the dataset referenced in part a). [3 points]
+```{r}
+hist(mydata$Income2005, xlab="Income",ylab="no#", col="blue", xlim=c(500,700000), breaks=100)
+```
+ or
+```{r}
+IncomeHist<- ggplot(mydata, aes(x=mydata$Income2005)) + geom_histogram(binwidth=10000,colour="blue")
+IncomeHist
+```
+ 
+
+c) Use `+facet_wrap(~Educ)` to facet the histogram on education level. [3 points]
+```{r}
+IncomeHist + facet_wrap(~Educ)
+```
+
+
+d) What do you learn from the histograms that wasn't apparent in the boxplots from question 1? [3 points]
+
+1) there are fewer people with less than 12 years of education
+2) most people have 12 years of education
+3) there a quite few people with less than 12 years of education with income levels greater than 100,000.
+
+### 2. Respiratory Rates
+
+a) Plot right closed and right open histograms for each of the two variables in the *ex0824* dataset in the **Sleuth3** package using default binwidths and breaks. (4 histograms in total). [4 points]
+```{r}
+x=ex0824
+hist(x$Age, col = "lightblue",
+     xlab = "right closed", font.lab = 2)
+hist(x$Age, col = "lightblue",right=FALSE,
+     xlab = "right open", font.lab = 2)
+
+hist(x$Rate, col = "lightblue",
+     xlab = "right closed", font.lab = 2)
+
+hist(x$Rate, col = "lightblue",right=FALSE,
+     xlab = "right open", font.lab = 2)
+```
+
+
+b) For which variable, `Age` or `Rate`, do the two versions differ more? Why? [3 points]
+Ans: The versions for 'Rate' differ the most because thare are more values in the 'Rate' variable which coincide with the bin boundries and are thus by default included in the left bins i.e. when right attribute of histogram is not set to FALSE and right bin when right attribute is set to FALSE
+
+c) Redraw the `Age` histograms with different parameters so that the right closed and right open versions are identical. [3 points]
+```{r}
+ hist(x$Age, breaks = seq(-0.25, 42.25, 5), col = "lightblue",
+      axes = FALSE)
+ axis(1, at = seq(-0.25, 42.25, 5))
+ 
+  hist(x$Age, breaks = seq(-0.25, 42.25, 5), col = "lightblue",
+      axes = FALSE,right=FALSE)
+ axis(1, at = seq(-0.25, 42.25, 5))
+```
+
+
+
+### 3. Movie budgets
+
+Are there rounding patterns in the `budget` variable of the *movies* in the **ggplot2movies** package? If so, what are the patterns? (Note: according to the textbook this dataset is in the **ggplot2** package, but it has since been moved to a separate package.) Support your conclusions with graphical evidence. You are encouraged to break the variable down into different budget ranges and consider them separately. [8 points] 
+```{r}
+install.packages('ggplot2movies')
+library(ggplot2movies)
+hist(movies$budget, col = "lightblue",
+     xlab = "right closed", font.lab = 2)
+hist(movies$budget, col = "lightblue",right=FALSE,
+      xlab = "right open", font.lab = 2)
+#summary
+summary(movies$budget)
+ #Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+ #       0    250000   3000000  13412513  15000000 200000000 
+ #    NA's 
+#  53573 
+
+```
+ans: As in the previous cases, many budget values fall in the bin boundries. To find patterns, first summarize the budget to obtain the ranges (min, max, mean, quartiles). Note that 53,573 movies have the values 'NA' for budget.
+```{r}
+df=data.frame(movies)
+```
+
+1) Movies with budget between 0 and 1st quartile of 250,000.
+```{r}
+FBlock=subset(df, budget>=0 & budget<=250000)
+hist(FBlock$budget)
+```
+2) Movies with budget greater than 250000 and mean of 13,412,513.
+```{r}
+SBlock=subset(df,budget>250000 & budget<=13412513)
+hist(SBlock$budget,col="lightblue")
+```
+3)Movies with budget greater than mean of 13,412,513 and 3rd Quarter of 15000000.  Note that the distribution for this range is sparse compared to the previous histogram distributions
+```{r}
+TBlock=subset(df,budget>13412513 & budget<=15000000)
+hist(TBlock$budget,col="lightblue")
+```
+4) Movies with budget greater than 3rd Quarter of 15000000 and max of 200000000
+```{r}
+FVBlock=subset(df,budget>15000000 & budget<=200000000)
+hist(FVBlock$budget,col="lightblue")
+```
+
+### 4. Finches
+
+a) Plot separate density histograms of the beak depth of the finches in *case0201* from the **Sleuth3** package, with density curves overlaid as on page 34 of the textbook. (However, do this by facetting on `Year` rather than using `grid.arrange`). [3 points]
+```{r}
+finchData=case0201
+c2=ggplot(finchData,aes(finchData$Depth))+
+geom_histogram(aes(y=..density..),binwidth=1,colour="blue")+
+geom_density()
+
+c2 + facet_wrap(~finchData$Year)
+```
+
+
+b) Plot both density curves on the same graph to facilitate comparison. Make 1976 yellow and 1978 blue.  Use alpha blending so the fills are transparent. [3 points]
+```{r}
+df=data.frame(finchData)
+ggplot(df, aes(x=Depth)) + geom_density(aes(group=Year, colour=Year, fill=Year), alpha=0.5) 
+```
+
+c) Based on your graphs in parts a) and b), describe how the distributions differ by year. [3 points]
+The density of the beaks is greater in the later year(1978) compared to the density of the beaks in 1976
+
+d) What is the cause of the difference according to the information in the help file? [3 points]
+As per the help file, it apprears that due to the  severe drought in 1977, the finches with stronger beaks most likely survived as they could feed on the only available food source: large tough seeds and thus pass on this charateristic to their offspring. This would explain the increase in the number of finches with larger beak depth.
+
+### 5. Salary
+
+Is the `Salary` variable in the *case0102* of **Sleuth3** normally distributed?  Use two different graphical methods to provide evidence. [6 points]
+Ans: As seen in the two graphs below, the salary variable is not normally distributed.
+The first graph shows the checking if the data is normally distributed using Q-Q plot and the second using histogram and normal curve
+```{r}
+salaryData=case0102
+summary(salaryData$Salary)
+ #  Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 3900    4980    5400    5420    6000    8100 
+x=salaryData$Salary
+#Method 1
+qqnorm(x)
+qqline(x)
+
+#Method 2
+df=data.frame(x)
+ggplot(df, aes(x)) + geom_histogram(aes(y = ..density..),
+                                    fill = "lightblue",
+                                    color = "black") + stat_function(fun = dnorm, args = list(mean = 5420, sd = 709.5872), color = "red", lwd = 1.5)
+
+
+```
+
+
+

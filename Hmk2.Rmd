@@ -1,0 +1,271 @@
+---
+title: "Homework #2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+options(repos="https://cran.rstudio.com" )
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE, 
+                      cache = TRUE)
+```
+
+### Chapter 4
+
+#### 1. Slot Machines (Chapter 4 exercises, #3, p. 72)
+
+[5 points]
+
+Do not use *grid.arrange()* for this exercise. Rather, use *gather()* to tidy the data and then facet on window number.  To make the comparison, use relative frequency bar charts (the heights of the bars in each facet sum to one).  Describe how the distributions differ.
+```{r}
+install.packages("DAAG")
+library(DAAG)
+library(package="lattice")
+library(tidyverse)
+#head(vlt)
+nwData=rownames_to_column(vlt)
+nwData2=gather(nwData,key,value,-prize,-night,-rowname)
+#head(nwData2)
+#calculate relative frequencies
+nwData3=nwData2 %>% group_by(key, value) %>% summarise (n = n()) %>% mutate(freq = n / sum(n))
+head(nwData3)
+ggplot(nwData3,aes(value,freq)) + geom_col() +facet_wrap(~key)
+#remove the rows with symbol 0 and plot again
+nwData4= nwData2[ which(nwData2$value > 0),]
+nwData5=nwData4 %>% group_by(key, value) %>% summarise (n = n()) %>% mutate(freq = n / sum(n))
+head(nwData5)
+ggplot(nwData5,aes(value,freq)) + geom_col() +facet_wrap(~key)
+```
+From the above bar charts, it appears that the distribution of the 7 symbols is not identical across the 3 windows. The symbol #1 appears more times in window 1 and 3 compared to window 2. In window 2, the symbols #2 and #3 apprear more frequently than the other two windows. It has to be noted that  the symbol #4 does not appear in any of the windows.
+
+#### 2. Detailed Mortality data ("Death2015.txt")
+
+[21 points]
+
+This data comes from the "Detailed Mortality" database available on https://wonder.cdc.gov/
+
+Code for all preprocessing must be shown. (That is, don't open in the file in Excel or similar, change things around, save it, and then import to R. Why? Because your steps are not reproducible.)
+
+```{r}
+#import the data
+ deathData = read.table("Death2015.txt",nrows=6896, header = TRUE,sep="\t", blank.lines.skip = TRUE) 
+```
+
+
+(a) For `Place of Death`, `Ten-Year Age Groups`, and `ICD Chapter Code` variables, do the following:
+
+Identify the type of variable (nominal, ordinal, or discrete) and draw a horizontal bar chart using best practices for order of categories.
+
+`Place of Death`
+```{r}
+levels(deathData$`Place of Death`) 
+#nominal data
+deathPlace=deathData %>% group_by(deathData$Place.of.Death) %>% summarize(count=n())
+ggplot(deathPlace, aes(deathPlace$`deathData$Place.of.Death`, deathPlace$count)) + geom_col() + coord_flip() + theme_grey(18)
+
+```
+
+`Ten-Year Age Groups`
+```{r}
+levels(deathData$Ten.Year.Age.Groups)
+#Ordinal data
+ageGroups=deathData %>% group_by(deathData$Ten.Year.Age.Groups) %>% summarize(count=n())
+ggplot(ageGroups, aes(ageGroups$`deathData$Ten.Year.Age.Groups`, ageGroups$count)) + geom_col() + coord_flip() + theme_grey(18)
+```
+
+
+`ICD Chapter Code`
+```{r}
+levels(deathData$ICD.Chapter.Code)
+#Nominal data
+codeGroups=deathData %>% group_by(deathData$ICD.Chapter.Code) %>% summarize(count=n())
+ggplot(codeGroups, aes(codeGroups$`deathData$ICD.Chapter.Code`, codeGroups$count)) + geom_col() + coord_flip() + theme_grey(18)
+```
+
+(b) Create horizontal bar charts for the ICD sub-chapter codes, one plot per ICD chapter code, by faceting on chapter code, *not* by using *grid.arrange()*.  Use `scales = "free"` with `facet_wrap()`. It should look like this (with data, of course!). Describe notable features.
+
+```{r}
+subCodeGrps2=deathData %>% group_by(deathData$ICD.Chapter.Code,deathData$ICD.Sub.Chapter.Code) %>% summarize(count=n())
+ggplot(subCodeGrps2,aes(subCodeGrps2$`deathData$ICD.Sub.Chapter.Code`,count)) + geom_col() + facet_wrap(~subCodeGrps2$`deathData$ICD.Chapter.Code`, scales = "free") +coord_flip()
+```
+In the above plots, the count of frequency of each sub chapter code for every chapter code is visualized. The x-axis scales are different for each panel and therefore, it is harder to compare the data across/between panels
+
+The chapter code A00-B99 (1st panel from left) which indicates "Certain infectious and parasitic diseases" has the max no# of sub chapter codes. The chapter code u00-u99 represents 'Codes for special purposes' such as SARS etc. There appears to be low death rates for this chapter and sub chapter
+
+(c) Change the `scales` parameter to `scales = "free_y"`. What changed?  What information does this set of graphs provide that wasn't available in part (b)?
+```{r}
+ggplot(subCodeGrps2,aes(subCodeGrps2$`deathData$ICD.Sub.Chapter.Code`,count)) + geom_col() + facet_wrap(~subCodeGrps2$`deathData$ICD.Chapter.Code`, scales = "free_y") +coord_flip()
+```
+The graphs now share common x-axis. Using the common scale, it is easier to comapre the data across the ICD code and the sub codes
+
+(d) Redraw the panels as *relative frequency* bar charts rather than *count* bar charts. (The lengths of the bars *in each panel separately* must sum to 1.) What new information do you gain?
+```{r}
+panelData=deathData %>% group_by(deathData$ICD.Chapter.Code,deathData$ICD.Sub.Chapter.Code) %>% summarise(n=n()) %>% mutate(freq = n / sum(n))
+ggplot(panelData,aes(panelData$`deathData$ICD.Sub.Chapter.Code`,panelData$freq)) + geom_col() + facet_wrap(~panelData$`deathData$ICD.Chapter.Code`, scales = "free") +coord_flip()
+```
+From the above graph, it is easier to compare the frequency between the sub chapters within a given chapter
+
+(e) Choose one of the small panels and redraw it as a single graph, using names rather than codes. (That is, use `ICD Chapter` and `ICD Sub-Chapter` instead of the code versions.)  What type of data is this? Note any interesting features.
+```{r}
+singlePData=deathData %>% group_by(deathData$ICD.Chapter,deathData$ICD.Sub.Chapter) %>% summarise(n=n()) %>% mutate(freq = n / sum(n))
+
+#subset for only one chapter using relative frequency
+singlePData2=subset(singlePData,singlePData$`deathData$ICD.Chapter`=='Neoplasms')
+ggplot(singlePData2,aes(singlePData2$`deathData$ICD.Sub.Chapter`,singlePData2$freq)) + geom_col() + facet_wrap(~singlePData2$`deathData$ICD.Chapter`, scales = "free_y") +coord_flip()
+```
+
+```{r}
+# plot using counts
+ggplot(singlePData2,aes(singlePData2$`deathData$ICD.Sub.Chapter`,singlePData2$n)) + geom_col() + facet_wrap(~singlePData2$`deathData$ICD.Chapter`, scales = "free_y") +coord_flip()
+```
+The above graphs present a better visual to study the individial sub chapters within any given chapter
+
+
+#### 3. Detailed Mortality, questions about the data
+
+[6 points]
+
+Cite your sources with links. 
+
+
+(a) Who is included in the death counts?
+All the dead U.S residents (50 states + District of Columbia) are included in the death counts for whom death certificates have been issued
+Source:
+Centers for Disease Control and Prevention, National Center for Health Statistics. Underlying Cause of Death
+https://wonder.cdc.gov/wonder/help/ucd.html
+
+(b) When was this query processed?  (Hint: it's in the file itself; don't provide the file time stamp.)
+Query Date: Feb 5, 2018 5:08:43 PM
+Source: Death2015.txt
+
+(c) What does "ICD" stand for? Which version is used for this particular dataset? Name five other countries that use the ICD for official mortality data.
+ICD stands for "International Classification of Disease" 
+ICD-10 version is used for the given dataset
+China, Canada, Brazil, France, Sweden are among other countries which have adopted ICD
+Source: Wikipedia
+https://en.wikipedia.org/wiki/ICD-10
+
+(d) Which U.S. organizations collects mortality data? Where is the headquarters located?
+National Center for Health Statistics collects the mortality data.
+Headquarters is located in Hyattsville, MD
+Source 1: 
+Centers for Disease Control and Prevention, National Center for Health Statistics. Underlying Cause of Death
+https://wonder.cdc.gov/wonder/help/ucd.html
+https://wonder.cdc.gov/ucd-icd10.html
+Source 2: Wikipedia
+https://en.wikipedia.org/wiki/National_Center_for_Health_Statistics
+
+
+(e) In brief, how is the data collected?  What is the estimated accuracy rate, according to the dataset documentation?
+The data from the death certificates from the US 50 states, along with District of Columbia is code by the individual states and provided to NCHS. In some cases, NCHS codes the data from the original Death Certificates provided to it by Sate Registrations.
+The dataset can be obtained with 95% Confidence Intervals
+
+Source: 
+Centers for Disease Control and Prevention, National Center for Health Statistics. Underlying Cause of Death
+https://wonder.cdc.gov/wonder/help/ucd.html
+
+
+### Chapter 5
+
+#### 1. Movie ratings
+
+[12 points]
+
+Explore *length* vs. *year* in the **ggplot2movies** dataset, after removing outliers. (Choose a reasonable cutoff).
+```{r}
+#remove outliers: i.e. length greater than 1.5(IQR of length)
+
+install.packages("ggplot2movies")
+library("ggplot2movies")
+summary(movies$length) #3rd quartile =100
+IQR(movies$length) #26
+#remove data with length values > 1.5*IQR (39)
+nwMovies=subset(movies,movies$length<=139)
+```
+
+
+Draw four scatterplots of *length* vs. *year* from the with the following variations:
+
+(a) Points with alpha blending
+```{r}
+install.packages("ggplot2")
+library(ggplot2)
+g=ggplot(nwMovies,aes(length,year)) + geom_point(alpha=0.05,colour="red", na.rm=TRUE, size=1) + theme_grey(18)
+g
+```
+
+
+(b) Points with alpha blending + density estimate contour lines
+```{r}
+g+geom_density_2d()
+```
+
+
+(c) Hexagonal heatmap of bin counts
+```{r}
+install.packages("viridis")
+install.packages("tidyverse")
+install.packages("viridisLite")
+install.packages("hexbin")
+library("viridis")
+library("tidyverse")
+library("viridisLite")
+library("hexbin")
+g1=ggplot(nwMovies, aes(length,year)) + scale_fill_viridis() + theme_classic(18)
+g1 + geom_hex(binwidth=c(5,5))
+```
+
+
+(d) Square heatmap of bin counts 
+```{r}
+library(MASS)
+f1=kde2d(nwMovies$length,nwMovies$year)
+image(f1)
+
+```
+
+
+For all, adjust parameters to the levels that provide the best views of the data. 
+
+(e) Describe noteworthy features of the data, using the movie ratings example on page 82 (last page of Section 5.3) as a guide.  
+
+e.1) There are 3 distinct clusters visible from all the maps: 2 clusters of movies with length between  0 and 25 and the largest cluster between lengths of 75 to 100
+
+e.2) fewer movies were made during the period 1890 and 1905/1910 and these movies were of short duration: less than length of 25
+
+e.3) The no# of movies increase as the years progress
+
+e.4) there are fewer movies of length between 25 and 50 throughout all the years comapred to short length (avg length approx. 12) and long lenth movies (avg length approx 85) 
+
+
+(f) How do (a)-(d) compare? Are there features that you can see in some but not all of the graphs?
+
+(f) The clusters can be made out very clearly in the graphs with contour lines
+The spread of data points and clumping are highly visible in the scatter and the contour plots. Not that the 3 clusters are visible in all the graphs albeit with not the same  clarity/clear-visibility
+
+#### 2. Leaves (Chapter 5 exercises, #7, p. 96)
+
+[6 points]
+(a)
+```{r}
+#require(GGally)
+install.packages("reshape")
+library("reshape")
+install.packages("ggplot2")
+library(ggplot2)
+ggpairs(leafshape[,c(1:3)])
+```
+Deduction from the above scatter plots:
+a.1) petiole v/s blade length (counter clock wise-1st graph): we see a weak positive correlation between the two variables
+a.2) blade length v/s blade width (counter clock wise-2nd graph): we see a strong positive correlation between the two variables
+a.3) petiole v/s blade width counter clock wise-3rd graph): we see the strongest positive correlation between the two variables
+
+(b)
+```{r}
+library("ggplot2")
+muLeaf=leafshape
+muLeaf=mutate(muLeaf,archFac=as.factor(leafshape$arch))
+ggpairs(muLeaf, mapping = aes(color = archFac), columns = c(1,2,3))
+```
+From the above scatterplots it is evident that all the 3 variables i.e. blade length, blade width and petiole show stronger positive correlation for the leaf architecture type Plagiotropic leaf (arch=0). The data points for this arch type show more variation (spread out) than that for  orthotropic leaf architecture (arch=1) for which the data points apprear more clumped together. The spread of the data is also evident from the density graphs.
+

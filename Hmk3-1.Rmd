@@ -1,0 +1,200 @@
+---
+title: "Homework 3 ;Uni:dm3310"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+options(repos="https://cran.rstudio.com" )
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE, 
+                      cache = TRUE)
+```
+
+**$1.$ Parallel Coordinates**
+
+$(a)$ Draw a parallel coordinates plot of the data in "ManhattanCDResults.csv" in the data folder on CourseWorks. (Original data source and additional information about the data can be found here:  https://cbcny.org/research/nyc-resident-feedback-survey-community-district-results). Your plot should have one line for each of the twelve Manhattan community districts in the dataset. 
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(parcoords)
+CitySatData=read.csv("ManhattanCDResults.csv")
+
+
+tidyCityData=as.data.frame(gather(CitySatData,key="key",value = "value",-Indicator,-Type))
+
+spreadCity=tidyCityData[,c(1,3:4)]
+
+df=spread(spreadCity,key=Indicator,value = value)
+
+ggparcoord(df,columns =2:46 ,scale = "uniminmax",groupColumn ="key")+theme(axis.text.x = element_text(angle = 90))
+
+```
+$(b)$ Do there appear to be greater differences across *indicators* or across *community districts*? (In other words, are Manhattan community districts more alike or more different in how their citizens express their satisfaction with city life? 
+
+Solution:
+Most districts show variability. If there was less, variability, the line shapes would be close to flatlines. However, note that there is greater variability for some indicators than the others. 
+
+$(c)$ Which indicators have wide distributions (great variety) in responses?
+Solution: here are few variables which show greater variability:
+Cleanliness of your neighborhood, Services for homeless people , Crime Control
+
+```{r}
+
+ggplot(tidyCityData)+geom_col(aes(key,value))+facet_wrap(~Indicator,ncol = 8,shrink=TRUE)+theme(title =element_text(size=2))
+```
+
+
+$(d)$ Does there appear to be a correlation between districts and overall satisfaction?  In order words, do some districts report high satisfaction on many indicators and some report low satisfaction on many indicators or are the results more mixed? (Hint: a different color for each community district helps identify these trends). 
+
+Solution:  
+
+As seen in the graph below, some districts do show higher statisfaction than the rest for many indicators. 
+```{r}
+
+ggparcoord(df,columns =2:46 ,scale = "uniminmax",groupColumn ="key")+theme(axis.text.x = element_text(angle = 90))
+```
+
+
+**$2.$ Mosaic Plots**
+
+Using the "Death2015.txt" data from the previous assignment, create a mosaic plot to identify whether `Age` is associated with `Place of Death`. Include only the top four `Age` categories. Treat `Age` as the independent variable and `Place of Death` as the dependent variable. (Hint: the dependent variable should be the last cut and it should be horizontal.) The labeling should be clear enough to identify what's what, that is, "good enough," not perfect. Do the variables appear to be associated? Describe briefly.
+```{r}
+
+library(vcd)
+library(vcdExtra)
+library(tidyverse)
+library(vcd)
+ deathDataX1 = read.table("Death2015.txt",nrows=6896, header = TRUE,sep="\t", blank.lines.skip = TRUE,stringsAsFactors=FALSE) 
+head(deathDataX1)
+deathDataX1=as.data.frame(deathDataX1)
+
+deathDataX2=select(deathDataX1,c(2,4))
+
+#head(deathDataX2)
+
+deathDataX2=filter(deathDataX2,deathDataX2$Ten.Year.Age.Groups=='< 1 year' | deathDataX2$Ten.Year.Age.Groups=='1-4 years' |  deathDataX2$Ten.Year.Age.Groups=='15-24 years'  |  deathDataX2$Ten.Year.Age.Groups=='25-34 years' )
+
+deathDataX2=as.data.frame(deathDataX2)
+
+#head(deathDataX2)
+
+deathDataX4=deathDataX2 %>%group_by(deathDataX2$Ten.Year.Age.Groups,deathDataX2$Place.of.Death)%>%count()
+
+
+mosaic(xtabs(deathDataX4$n~deathDataX4$`deathDataX2$Ten.Year.Age.Groups`+deathDataX4$`deathDataX2$Place.of.Death`,data=deathDataX4),direction =c("v","h"), rot_labels=c(0,90,0,0) )
+
+```
+
+**$3.$ Time Series**
+
+$(a)$ Use the `tidyquant` package to collect stock information on four stocks of your choosing.  Create a line chart showing the closing price of the four stocks on the same graph, employing a different color for each stock.
+
+```{r}
+install.packages("tidyquant")
+library(tidyquant)
+aapl_prices  <- tq_get("AAPL", get = "stock.prices", from = " 2017-01-01")
+googl_prices  <- tq_get("GOOGL", get = "stock.prices", from = " 2017-01-01")
+amzn_prices  <- tq_get("AMZN", get = "stock.prices", from = " 2017-01-01")
+msft_prices  <- tq_get("MSFT", get = "stock.prices", from = " 2017-01-01")
+
+stockData=c("AAPL", "GOOG", "FB","AMZN") %>%
+    tq_get(get = "stock.prices", from = "2017-01-01", to = "2018-01-01")
+
+stockData2=select(stockData,symbol,close,date)
+
+
+ggplot(stockData2,aes(date,close,color=symbol))+geom_line()
+
+```
+
+$(b)$ Transform the data so each stock begins at 100 and replot. Do you learn anything new that wasn't visible in part (a)?
+
+```{r}
+tidyStock <- stockData2 %>% group_by(symbol) %>% 
+  mutate(index = 100*close/close[1]) %>% ungroup()
+
+ggplot(tidyStock,aes(date,index,color=symbol))+geom_line()
+```
+The new graph shows the variation (overall inscrease) in Facebook and Apple stocks which wasn't visible in the earlier plot. Looks like the percentage increase in Amazon, Apple and FaceBook is much higher than the percentage increase in Google stock closing price
+
+
+**$4.$ Missing Data**
+
+For this question, explore the New York State Feb 2017 snow accumulation dataset available in the data folder on CourseWorks: "NY-snowfall-201702.csv". The original data source is here: https://www.ncdc.noaa.gov/snow-and-ice/daily-snow/
+
+$(a)$ Show missing patterns graphically.
+```{r}
+install.packages("extracat")
+library(extracat)
+ snowData1 = read.csv("NY-snowfall-201702.csv",header = TRUE,skip=1,na.strings = "M",check.names = FALSE,stringsAsFactors = FALSE) 
+
+#replace trace values with some other low numerical values
+snowData2=snowData1
+snowData2[snowData2=='T']<-0.005
+
+
+extracat::visna(select(snowData2,7:34),sort="r")
+
+```
+
+$(b)$ Is the percent of missing values consistent across days of the month, or is there variety? 
+From the graph, it appears that the begining of the month as well as the middle have a lot of missing values. Therefore, the percentage of missing values across the month is not consistent.
+
+$(c)$ Is the percent of missing values consistent across collection stations, or is there variety?
+
+Solution:
+As evident from the graph below, the missing values are not consistent across the statsions
+```{r}
+snowData3=select(snowData2,c(2,7:34))
+
+snowData4=snowData3%>%gather(key,value,-`Station Name`)
+snowData5=spread(snowData4,key = `Station Name`,value = value)
+
+x=as.data.frame(sapply(snowData5, function(x) sum(is.na(x))))
+
+
+x=rownames_to_column(x)
+colnames(x)<-c("Station","MissingData")
+
+x$Station <- factor(x$Station, levels = x$Station[order(-x$MissingData)])
+
+x <- x %>% group_by(Station) %>% 
+  mutate(MissingPercent = 100*MissingData/28) 
+x=filter(x,Station!='key')
+
+ggplot(x,aes(Station,MissingPercent))+geom_col()+theme(text = element_text(size=5),axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+
+$(d)$ Is the daily average snowfall correlated with the daily missing values percent?  On the basis of these results, what is your assessment of the reliability of the data to capture true snowfall patterns? In other words, based on what you've discovered, do you think that the missing data is highly problematic, or not?
+
+```{r}
+
+snowDataX1=select(snowData2,c(7:34))
+
+snowDataX2=snowDataX1%>%gather(key,value)
+
+snowDataX3=snowDataX2
+colnames(snowDataX3)<-c("day","snow")
+
+snowDataX3$snow=as.numeric(snowDataX3$snow)
+
+
+snowDataX4=snowDataX3 %>% group_by(day)%>%mutate(N= sum(!is.na(snow)),
+             mean = mean(snow, na.rm=TRUE))
+ggplot(snowDataX4,aes(N,mean))+geom_point() 
+
+```
+Solution:
+As avident from the above graph, the average for the days with most mossing values is high. Therefore the missing value issue is problematic
+
+
+
+
+
+
+
+
